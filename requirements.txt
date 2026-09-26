@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pymysql
+pydantic-settings
+pwdlib
+pwdlib[argon2]
+python-jose[cryptography]

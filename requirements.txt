@@ -6,3 +6,5 @@ pydantic-settings
 pwdlib
 pwdlib[argon2]
 python-jose[cryptography]
+pytest
+httpx

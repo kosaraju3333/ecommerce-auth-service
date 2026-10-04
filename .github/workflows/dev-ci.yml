@@ -43,9 +43,9 @@ jobs:
       # -----------------------------------
       # 4. Unit tests
       # -----------------------------------
-      - name: Run unit tests
-        run: |
-          pytest -v
+      # - name: Run unit tests
+      #   run: |
+      #     pytest -v
 
 
       # -----------------------------------

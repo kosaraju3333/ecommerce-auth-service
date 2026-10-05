@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   validate:
+    name: Unit and API Tests
     runs-on: ubuntu-latest
 
     steps:

@@ -45,7 +45,7 @@ jobs:
       # -----------------------------------
       - name: Run unit tests
         run: |
-          pytest -v
+          python -m pytest -v
 
 
       # -----------------------------------

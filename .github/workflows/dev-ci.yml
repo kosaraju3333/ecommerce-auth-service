@@ -60,6 +60,9 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 
+      - name: Set short Git SHA
+        run: |
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       # -----------------------------------
       # 6. Build Docker image
@@ -67,7 +70,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ vars.ECR_REPOSITORY }}:${{ github.sha }} .
+            -t ${{ vars.ECR_REPOSITORY }}:$SHORT_SHA .
 
 
       # -----------------------------------
@@ -76,7 +79,7 @@ jobs:
       # - name: Trivy image vulnerability scan
       #   uses: aquasecurity/trivy-action@master
       #   with:
-      #     image-ref: ${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+      #     image-ref: ${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
       #     severity: HIGH,CRITICAL
       #     exit-code: 1
       #     ignore-unfixed: true
@@ -106,8 +109,8 @@ jobs:
       - name: Tag Docker image
         run: |
           docker tag \
-            ${{ vars.ECR_REPOSITORY }}:${{ github.sha }} \
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ vars.ECR_REPOSITORY }}:$SHORT_SHA \
+            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
 
 
       # -----------------------------------
@@ -116,4 +119,4 @@ jobs:
       - name: Push Docker image
         run: |
           docker push \
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:$SHORT_SHA

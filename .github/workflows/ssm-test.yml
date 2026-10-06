@@ -1,0 +1,46 @@
+name: SSM DEV Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  ssm-test:
+    name: Test SSM Connection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::828048069567:role/ecommerce-develop-github-actions-role
+          aws-region: us-east-1
+
+      - name: Send SSM command
+        id: ssm
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "i-0734295b0b07de1d2" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["whoami","hostname","docker ps"]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for SSM command
+        run: |
+          aws ssm wait command-executed \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "i-0734295b0b07de1d2"
+
+      - name: Show SSM output
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "i-0734295b0b07de1d2" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'

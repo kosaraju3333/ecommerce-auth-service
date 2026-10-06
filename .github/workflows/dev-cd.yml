@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to DEV
+    name: Deploy Auth to DEV
     runs-on: ubuntu-latest
 
     steps:
@@ -24,30 +24,44 @@ jobs:
           role-to-assume: arn:aws:iam::828048069567:role/ecommerce-develop-github-actions-role
           aws-region: us-east-1
 
-      - name: Show image to deploy
-        run: |
-          echo "Image tag from CI: ${{ inputs.image_tag }}"
-
-      - name: Send SSM test command
+      - name: Deploy Auth using SSM
         id: ssm
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "i-0734295b0b07de1d2" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["echo === GitHub CD SSM Test ===","whoami","hostname","docker ps"]' \
+            --parameters "commands=[
+              \"set -e\",
+              \"echo '=== Starting Auth deployment ==='\",
+              \"mkdir -p /opt/ecommerce/auth\",
+              \"aws secretsmanager get-secret-value --secret-id ecommerce/dev/auth --region us-east-1 --query SecretString --output text | jq -r 'to_entries[] | \\\"\\(.key)=\\(.value)\\\"' > /opt/ecommerce/auth/auth.env\",
+              \"chmod 600 /opt/ecommerce/auth/auth.env\",
+              \"aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 828048069567.dkr.ecr.us-east-1.amazonaws.com\",
+              \"docker pull 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-auth:${IMAGE_TAG}\",
+              \"docker stop ecommerce-auth || true\",
+              \"docker rm ecommerce-auth || true\",
+              \"docker run -d --name ecommerce-auth --restart unless-stopped --env-file /opt/ecommerce/auth/auth.env -p 8001:8001 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-auth:${IMAGE_TAG}\",
+              \"sleep 5\",
+              \"curl --fail http://localhost:8001/health\",
+              \"echo '=== Auth deployment successful ==='\",
+              \"docker ps --filter name=ecommerce-auth\"
+            ]" \
             --query "Command.CommandId" \
             --output text)
 
           echo "SSM Command ID: $COMMAND_ID"
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for SSM command
+      - name: Wait for deployment
         run: |
           aws ssm wait command-executed \
             --command-id "${{ steps.ssm.outputs.command_id }}" \
             --instance-id "i-0734295b0b07de1d2"
 
-      - name: Show SSM output
+      - name: Show deployment result
+        if: always()
         run: |
           aws ssm get-command-invocation \
             --command-id "${{ steps.ssm.outputs.command_id }}" \

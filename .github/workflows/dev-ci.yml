@@ -13,6 +13,10 @@ jobs:
   build-scan-push:
     runs-on: ubuntu-latest
 
+    outputs:
+      image_tag: ${{ steps.image-tag.outputs.short_sha }}
+
+
     steps:
 
       # -----------------------------------
@@ -61,8 +65,11 @@ jobs:
           ignore-unfixed: true
 
       - name: Set short Git SHA
+        id: image-tag
         run: |
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------
       # 6. Build Docker image
@@ -120,3 +127,11 @@ jobs:
         run: |
           docker push \
             ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
+
+  deploy-dev:
+    name: Trigger DEV Deployment
+    needs: build-scan-push
+    uses: ./.github/workflows/dev-cd.yml
+    with:
+      image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
+    secrets: inherit

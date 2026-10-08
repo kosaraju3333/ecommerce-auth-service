@@ -47,7 +47,7 @@ jobs:
               
               \"docker stop ecommerce-auth || true\",
               \"docker rm ecommerce-auth || true\",
-              \"docker run -d --name ecommerce-auth --restart unless-stopped --env-file /opt/ecommerce/auth/auth.env -p 8001:8001 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-auth:${IMAGE_TAG}\",
+              \"docker run -d --name ecommerce-auth --network ecommerce-network --restart unless-stopped --env-file /opt/ecommerce/auth/auth.env -p 8001:8001 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-auth:${IMAGE_TAG}\",
               \"sleep 5\",
               \"curl --fail http://localhost:8001/health\",
               \"echo '=== Auth deployment successful ==='\",

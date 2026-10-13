@@ -18,7 +18,7 @@ pipeline {
             }
         }
 
-        stage('PR - Ruff Lint') {
+        stage('PR - Gitleaks Scan') {
             when {
                 allOf {
                     changeRequest()

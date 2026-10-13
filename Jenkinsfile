@@ -18,23 +18,22 @@ pipeline {
             }
         }
 
-        stage('PR Validation') {
+        stage('PR - Ruff Lint') {
             when {
-                changeRequest()
-            }
-            steps {
-                echo 'Running PR validation pipeline'
-            }
-        }
-
-        stage('Release CI/CD') {
-            when {
-                expression {
-                    return env.BRANCH_NAME ==~ /^release\/.+$/
+                allOf {
+                    changeRequest()
+                    expression {
+                        return env.CHANGE_TARGET?.startsWith('release/')
+                    }
                 }
             }
             steps {
-                echo 'Running release CI/CD pipeline'
+                sh '''
+                    set -eu
+                    python3 -m venv .venv
+                    .venv/bin/python -m pip install ruff==0.13.2
+                    .venv/bin/ruff check .
+                '''
             }
         }
     }

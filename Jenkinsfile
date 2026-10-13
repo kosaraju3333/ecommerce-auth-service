@@ -18,7 +18,7 @@ pipeline {
             }
         }
 
-        stage('PR - Gitleaks Scan') {
+        stage('PR - Validation') {
             when {
                 allOf {
                     changeRequest()
@@ -28,15 +28,46 @@ pipeline {
                 }
             }
 
-            steps {
-                sh '''
-                    set -eu
+            parallel {
+                stage('Gitleaks') {
+                    steps {
+                        sh '''
+                            set -eu
 
-                    gitleaks git . \
-                    --redact \
-                    --exit-code 1
-                '''
+                            gitleaks git . \
+                            --redact \
+                            --exit-code 1
+                        '''
+                    }
+                }
+
+                stage('Pytest') {
+                    steps {
+                        sh '''
+                            set -eu
+                            python3 -m venv .venv
+                            .venv/bin/python -m pip install -r requirements.txt
+                            .venv/bin/python -m pip install pytest
+                            .venv/bin/python -m pytest tests/unit/ -v
+                            .venv/bin/python -m pytest tests/api/ -v
+                        '''
+                    }
+                }
+
+                stage('SonarQube') {
+                    steps {
+                        echo 'SonarQube configuration pending'
+                    }
+                }
+
+                stage('Trivy') {
+                    steps {
+                        echo 'Trivy configuration pending'
+                    }
+                }
+
             }
+            
 
 
         }

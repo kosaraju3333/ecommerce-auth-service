@@ -56,7 +56,22 @@ pipeline {
 
                 stage('SonarQube') {
                     steps {
-                        echo 'SonarQube configuration pending'
+                        script {
+                            def scannerHome = tool 'SonarScanner'
+
+                            withSonarQubeEnv('SonarQube-Server') {
+                                sh """
+                                    ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=ecommerce-auth \
+                                    -Dsonar.sources=app \
+                                    -Dsonar.tests=tests \
+                                    -Dsonar.python.version=3.13 \
+                                    -Dsonar.pullrequest.key=${env.CHANGE_ID} \
+                                    -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} \
+                                    -Dsonar.pullrequest.base=${env.CHANGE_TARGET}
+                                """
+                            }
+                        }
                     }
                 }
 

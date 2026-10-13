@@ -18,24 +18,27 @@ pipeline {
             }
         }
 
-        stage('PR Validation') {
+        stage('PR - Gitleaks Scan') {
             when {
-                changeRequest()
-            }
-            steps {
-                echo 'Running PR validation pipeline'
-            }
-        }
-
-        stage('Release CI/CD') {
-            when {
-                expression {
-                    return env.BRANCH_NAME ==~ /^release\/.+$/
+                allOf {
+                    changeRequest()
+                    expression {
+                        return env.CHANGE_TARGET?.startsWith('release/')
+                    }
                 }
             }
+
             steps {
-                echo 'Running release CI/CD pipeline'
+                sh '''
+                    set -eu
+
+                    gitleaks git . \
+                    --redact \
+                    --exit-code 1
+                '''
             }
+
+
         }
     }
 }

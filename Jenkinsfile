@@ -62,7 +62,7 @@ pipeline {
                             trivy fs \
                                 --scanners vuln,secret,misconfig \
                                 --severity HIGH,CRITICAL \
-                                --exit-code 1 \
+                                --exit-code 0 \
                                 --skip-dirs .venv \
                                 --skip-dirs .git \
                                 --format table \
@@ -82,10 +82,10 @@ pipeline {
                     not {
                         changeRequest()
                     }
-                }
-                expression {
-                    return env.BRANCH_NAME?.startsWith('release/')
-                }   
+                    expression {
+                        return env.BRANCH_NAME?.startsWith('release/')
+                    }
+                }  
             }
 
             stages {

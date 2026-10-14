@@ -65,6 +65,34 @@ pipeline {
         }
 
 
+        stage('Test Coverage') {
+            when {
+                expression {
+                    return env.BRANCH_NAME?.startsWith('release/')
+                }
+            }
+
+            steps {
+                sh '''
+                    set -eu
+
+                    python3 -m venv .venv
+
+                    .venv/bin/python -m pip install -r requirements.txt
+
+                    .venv/bin/python -m pip install pytest pytest-cov
+
+                    .venv/bin/python -m pytest tests/unit/ tests/api/ \
+                        --cov=app \
+                        --cov-report=term-missing \
+                        --cov-report=xml:coverage.xml
+
+                    test -s coverage.xml
+                '''
+            }
+        }
+
+
         stage('SonarQube Analysis') {
             when {
                 expression {
@@ -81,12 +109,14 @@ pipeline {
                             -Dsonar.projectKey=ecommerce-auth \
                             -Dsonar.sources=app \
                             -Dsonar.tests=tests \
-                            -Dsonar.python.version=3.13
+                            -Dsonar.python.version=3.13 \
+                            -Dsonar.python.coverage.reportPaths=coverage.xml
                         """
                     }
                 }
             }
         }
+        
 
         stage('SonarQube Quality Gate') {
             when {

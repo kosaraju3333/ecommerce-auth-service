@@ -54,9 +54,20 @@ pipeline {
                     }
                 }
 
-                stage('Trivy') {
+                stage('Trivy FS Scan') {
                     steps {
-                        echo 'Trivy configuration pending'
+                        sh '''
+                            set -eu
+
+                            trivy fs \
+                                --scanners vuln,secret,misconfig \
+                                --severity HIGH,CRITICAL \
+                                --exit-code 0 \
+                                --skip-dirs .venv \
+                                --skip-dirs .git \
+                                --format table \
+                                .
+                        '''
                     }
                 }
 
@@ -64,73 +75,67 @@ pipeline {
 
         }
 
+        stage('Release - Code Quality Validation') {
 
-        stage('Test Coverage') {
             when {
-                expression {
-                    return env.BRANCH_NAME?.startsWith('release/')
+                allOf {
+                    not {
+                        changeRequest()
+                    }
+                    expression {
+                        return env.BRANCH_NAME?.startsWith('release/')
+                    }
+                }  
+            }
+
+            stages {
+
+                stage('Test Coverage') {
+                    steps {
+                        sh '''
+                            set -eu
+
+                            python3 -m venv .venv
+                            .venv/bin/python -m pip install -r requirements.txt
+                            .venv/bin/python -m pip install pytest pytest-cov
+
+                            .venv/bin/python -m pytest tests/unit/ tests/api/ \
+                                --cov=app \
+                                --cov-report=term-missing \
+                                --cov-report=xml:coverage.xml
+                        '''
+                    }
                 }
-            }
 
-            steps {
-                sh '''
-                    set -eu
+                stage('SonarQube Analysis') {
+                    steps {
+                        script {
+                            def scannerHome = tool 'SonarScanner'
 
-                    python3 -m venv .venv
-
-                    .venv/bin/python -m pip install -r requirements.txt
-
-                    .venv/bin/python -m pip install pytest pytest-cov
-
-                    .venv/bin/python -m pytest tests/unit/ tests/api/ \
-                        --cov=app \
-                        --cov-report=term-missing \
-                        --cov-report=xml:coverage.xml
-
-                    test -s coverage.xml
-                '''
-            }
-        }
-
-
-        stage('SonarQube Analysis') {
-            when {
-                expression {
-                    return env.BRANCH_NAME?.startsWith('release/')
+                            withSonarQubeEnv('SonarQube-Server') {
+                                sh """
+                                    ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=ecommerce-auth \
+                                    -Dsonar.sources=app,alembic \
+                                    -Dsonar.tests=tests \
+                                    -Dsonar.python.version=3.13 \
+                                    -Dsonar.python.coverage.reportPaths=coverage.xml \
+                                    -Dsonar.coverage.exclusions=alembic/**
+                                """
+                            }
+                        }
+                    }
                 }
-            }
-            steps {
-                script {
-                    def scannerHome = tool 'SonarScanner'
 
-                    withSonarQubeEnv('SonarQube-Server') {
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=ecommerce-auth \
-                            -Dsonar.sources=app,alembic,.env \
-                            -Dsonar.tests=tests \
-                            -Dsonar.python.version=3.13 \
-                            -Dsonar.python.coverage.reportPaths=coverage.xml
-                        """
+                stage('SonarQube Quality Gate') {
+                    steps {
+                        timeout(time: 10, unit: 'MINUTES') {
+                            waitForQualityGate abortPipeline: true
+                        }
                     }
                 }
             }
         }
-        
-
-        stage('SonarQube Quality Gate') {
-            when {
-                expression {
-                    return env.BRANCH_NAME?.startsWith('release/')
-                }
-            }
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
 
     }
 }

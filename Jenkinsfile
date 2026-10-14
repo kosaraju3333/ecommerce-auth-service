@@ -54,27 +54,6 @@ pipeline {
                     }
                 }
 
-                stage('SonarQube') {
-                    steps {
-                        script {
-                            def scannerHome = tool 'SonarScanner'
-
-                            withSonarQubeEnv('SonarQube-Server') {
-                                sh """
-                                    ${scannerHome}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=ecommerce-auth \
-                                    -Dsonar.sources=app \
-                                    -Dsonar.tests=tests \
-                                    -Dsonar.python.version=3.13 \
-                                    -Dsonar.pullrequest.key=${env.CHANGE_ID} \
-                                    -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} \
-                                    -Dsonar.pullrequest.base=${env.CHANGE_TARGET}
-                                """
-                            }
-                        }
-                    }
-                }
-
                 stage('Trivy') {
                     steps {
                         echo 'Trivy configuration pending'
@@ -82,9 +61,46 @@ pipeline {
                 }
 
             }
-            
-
 
         }
+
+
+        stage('SonarQube Analysis') {
+            when {
+                expression {
+                    return env.BRANCH_NAME?.startsWith('release/')
+                }
+            }
+            steps {
+                script {
+                    def scannerHome = tool 'SonarScanner'
+
+                    withSonarQubeEnv('SonarQube-Server') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=ecommerce-auth \
+                            -Dsonar.sources=app \
+                            -Dsonar.tests=tests \
+                            -Dsonar.python.version=3.13
+                        """
+                    }
+                }
+            }
+        }
+
+        // stage('SonarQube Quality Gate') {
+        //     when {
+        //         expression {
+        //             return env.BRANCH_NAME?.startsWith('release/')
+        //         }
+        //     }
+        //     steps {
+        //         timeout(time: 10, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
+
+
     }
 }

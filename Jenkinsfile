@@ -78,9 +78,14 @@ pipeline {
         stage('Release - Code Quality Validation') {
 
             when {
+                allOf {
+                    not {
+                        changeRequest()
+                    }
+                }
                 expression {
                     return env.BRANCH_NAME?.startsWith('release/')
-                }
+                }   
             }
 
             stages {

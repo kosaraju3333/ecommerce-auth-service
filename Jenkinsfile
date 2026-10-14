@@ -88,18 +88,18 @@ pipeline {
             }
         }
 
-        // stage('SonarQube Quality Gate') {
-        //     when {
-        //         expression {
-        //             return env.BRANCH_NAME?.startsWith('release/')
-        //         }
-        //     }
-        //     steps {
-        //         timeout(time: 10, unit: 'MINUTES') {
-        //             waitForQualityGate abortPipeline: true
-        //         }
-        //     }
-        // }
+        stage('SonarQube Quality Gate') {
+            when {
+                expression {
+                    return env.BRANCH_NAME?.startsWith('release/')
+                }
+            }
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
 
     }

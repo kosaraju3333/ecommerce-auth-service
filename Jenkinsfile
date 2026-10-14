@@ -54,12 +54,6 @@ pipeline {
                     }
                 }
 
-                stage('SonarQube') {
-                    steps {
-                        echo 'SonarQube configuration pending'
-                    }
-                }
-
                 stage('Trivy') {
                     steps {
                         echo 'Trivy configuration pending'
@@ -67,9 +61,46 @@ pipeline {
                 }
 
             }
-            
-
 
         }
+
+
+        stage('SonarQube Analysis') {
+            when {
+                expression {
+                    return env.BRANCH_NAME?.startsWith('release/')
+                }
+            }
+            steps {
+                script {
+                    def scannerHome = tool 'SonarScanner'
+
+                    withSonarQubeEnv('SonarQube-Server') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=ecommerce-auth \
+                            -Dsonar.sources=app \
+                            -Dsonar.tests=tests \
+                            -Dsonar.python.version=3.13
+                        """
+                    }
+                }
+            }
+        }
+
+        // stage('SonarQube Quality Gate') {
+        //     when {
+        //         expression {
+        //             return env.BRANCH_NAME?.startsWith('release/')
+        //         }
+        //     }
+        //     steps {
+        //         timeout(time: 10, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
+
+
     }
 }

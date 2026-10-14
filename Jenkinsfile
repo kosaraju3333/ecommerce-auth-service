@@ -107,7 +107,7 @@ pipeline {
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=ecommerce-auth \
-                            -Dsonar.sources=app \
+                            -Dsonar.sources=app,alembic,.env \
                             -Dsonar.tests=tests \
                             -Dsonar.python.version=3.13 \
                             -Dsonar.python.coverage.reportPaths=coverage.xml

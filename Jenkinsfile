@@ -174,6 +174,9 @@ pipeline {
                         set -eu
 
                         docker build \
+                            --platform linux/amd64 \
+                            --provenance=false \
+                            --sbom=false \
                             -t '${IMAGE_URI}' \
                             .
 

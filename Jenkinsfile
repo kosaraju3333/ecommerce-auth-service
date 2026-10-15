@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = credentials('aws-account-id')
+        ECR_REPOSITORY = 'ecommerce-auth-staging'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -133,6 +139,55 @@ pipeline {
                             waitForQualityGate abortPipeline: true
                         }
                     }
+                }
+            }
+        }
+
+        stage('Release - Docker Build and ECR Push') {
+
+            when {
+                allOf {
+                    not {
+                        changeRequest()
+                    }
+                    expression {
+                        return env.BRANCH_NAME?.startsWith('release/')
+                    }
+                }
+            }
+
+            steps {
+                script {
+
+                    def IMAGE_TAG = sh(
+                        script: 'git rev-parse --short=7 HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    def ECR_REGISTRY = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
+
+                    def IMAGE_URI = "${ECR_REGISTRY}/${env.ECR_REPOSITORY}:${IMAGE_TAG}"
+
+                    echo "Building Docker Image: ${IMAGE_URI}"
+
+                    sh """
+                        set -eu
+
+                        docker build \
+                            --platform linux/amd64 \
+                            -t '${IMAGE_URI}' \
+                            .
+
+                        aws ecr get-login-password \
+                            --region '${env.AWS_REGION}' |
+                            docker login \
+                                --username AWS \
+                                --password-stdin '${ECR_REGISTRY}'
+
+                        docker push '${IMAGE_URI}'
+                    """
+
+                    echo "Image pushed successfully: ${IMAGE_URI}"
                 }
             }
         }

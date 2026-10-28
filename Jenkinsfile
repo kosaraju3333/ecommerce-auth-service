@@ -209,20 +209,19 @@ pipeline {
                 }
             }
 
-            stage('Test SSH Connection') {
-                steps {
-                    sshagent(credentials: ['staging-app-ssh']) {
-                        sh '''
-                            set -eux
+            steps {
+                sshagent(credentials: ['staging-app-ssh']) {
+                    sh '''
+                        set -eux
 
-                            ssh -o BatchMode=yes \
-                                -o StrictHostKeyChecking=yes \
-                                ubuntu@192.168.5.17 \
-                                'echo SSH_CONNECTED; whoami; hostname'
-                        '''
-                    }
+                        ssh -o BatchMode=yes \
+                            -o StrictHostKeyChecking=yes \
+                            ubuntu@192.168.5.17 \
+                            'echo SSH_CONNECTED; whoami; hostname'
+                    '''
                 }
             }
+            
 
         //     steps {
         //         sshagent(credentials: ['staging-app-ssh']) {

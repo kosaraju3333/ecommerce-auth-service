@@ -230,7 +230,7 @@ pipeline {
 
                         ssh -o BatchMode=yes \
                             -o StrictHostKeyChecking=yes \
-                            root@192.168.5.17 \
+                            ubuntu@192.168.5.17 \
                             "IMAGE_URI='$DEPLOY_IMAGE_URI' bash -s" <<'REMOTE'
                         set -eu
 

@@ -209,66 +209,66 @@ pipeline {
                 }
             }
 
+            // steps {
+            //     sshagent(credentials: ['staging-app-ssh']) {
+            //         sh '''
+            //             set -eux
+
+            //             ssh -o BatchMode=yes \
+            //                 -o StrictHostKeyChecking=yes \
+            //                 root@192.168.5.17 \
+            //                 'echo SSH_CONNECTED; whoami; hostname'
+            //         '''
+            //     }
+            // }
+            
+
             steps {
                 sshagent(credentials: ['staging-app-ssh']) {
                     sh '''
-                        set -eux
+                        set -eu
 
                         ssh -o BatchMode=yes \
                             -o StrictHostKeyChecking=yes \
-                            ubuntu@192.168.5.17 \
-                            'echo SSH_CONNECTED; whoami; hostname'
+                            root@192.168.5.17 \
+                            "IMAGE_URI='$DEPLOY_IMAGE_URI' bash -s" <<'REMOTE'
+                        set -eu
+
+                        CONTAINER_NAME="ecommerce-auth-staging"
+                        NETWORK="ecommerce-network"
+                        ENV_FILE="/opt/ecommerce/staging/auth/auth.env"
+
+                        test -f "$ENV_FILE"
+
+                        aws ecr get-login-password --region us-east-1 |
+                            docker login --username AWS \
+                            --password-stdin \
+                            828048069567.dkr.ecr.us-east-1.amazonaws.com
+
+                        docker pull "$IMAGE_URI"
+
+                        docker stop "$CONTAINER_NAME"
+                        docker rm "$CONTAINER_NAME"
+
+                        docker run -d \
+                            --name "$CONTAINER_NAME" \
+                            --network "$NETWORK" \
+                            --restart unless-stopped \
+                            --env-file "$ENV_FILE" \
+                            -p 8001:8001 \
+                            "$IMAGE_URI"
+
+                        echo "Waiting for Auth Service..."
+                        sleep 10
+
+                        curl --fail --silent --show-error \
+                            http://localhost:8001/health
+
+                        echo "Auth deployment successful"
+        REMOTE
                     '''
                 }
             }
-            
-
-        //     steps {
-        //         sshagent(credentials: ['staging-app-ssh']) {
-        //             sh '''
-        //                 set -eu
-
-        //                 ssh -o BatchMode=yes \
-        //                     -o StrictHostKeyChecking=yes \
-        //                     ubuntu@192.168.5.17 \
-        //                     "IMAGE_URI='$DEPLOY_IMAGE_URI' bash -s" <<'REMOTE'
-        //                 set -eu
-
-        //                 CONTAINER_NAME="ecommerce-auth-staging"
-        //                 NETWORK="ecommerce-network"
-        //                 ENV_FILE="/opt/ecommerce/auth/auth.env"
-
-        //                 test -f "$ENV_FILE"
-
-        //                 aws ecr get-login-password --region us-east-1 |
-        //                     docker login --username AWS \
-        //                     --password-stdin \
-        //                     828048069567.dkr.ecr.us-east-1.amazonaws.com
-
-        //                 docker pull "$IMAGE_URI"
-
-        //                 docker stop "$CONTAINER_NAME"
-        //                 docker rm "$CONTAINER_NAME"
-
-        //                 docker run -d \
-        //                     --name "$CONTAINER_NAME" \
-        //                     --network "$NETWORK" \
-        //                     --restart unless-stopped \
-        //                     --env-file "$ENV_FILE" \
-        //                     -p 8001:8001 \
-        //                     "$IMAGE_URI"
-
-        //                 echo "Waiting for Auth Service..."
-        //                 sleep 10
-
-        //                 curl --fail --silent --show-error \
-        //                     http://localhost:8001/health
-
-        //                 echo "Auth deployment successful"
-        // REMOTE
-        //             '''
-        //         }
-        //     }
         }
 
 

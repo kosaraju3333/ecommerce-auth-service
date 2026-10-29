@@ -260,6 +260,25 @@ pipeline {
             }
         }
 
+        stage('Release - STAGING Integration Tests') {
+            when {
+                allOf {
+                    not {
+                        changeRequest()
+                    }
+                    expression {
+                        return env.BRANCH_NAME?.startsWith('release/')
+                    }
+                }
+            }
+
+            steps {
+                build job: 'ecommerce-integration-tests-staging/release%2Fv1.0',
+                    wait: true,
+                    propagate: true
+            }
+        }
+
 
 
 

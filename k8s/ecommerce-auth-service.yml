@@ -1,0 +1,25 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-auth-service
+  ### Namespace containing your Auth Deployment
+  namespace: ecommerce-auth
+  labels:
+    app: ecommerce-auth
+
+spec:
+  ### Exposes Auth Service internally
+  type: ClusterIP
+
+  ### Routes traffic to Pods with this label
+  selector:
+    app: ecommerce-auth
+
+  ports:
+    - name: http
+      protocol: TCP
+      ### Port exposed by the Kubernetes Service
+      port: 8001
+      ### FastAPI container port
+      targetPort: 8001

@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-auth
+  namespace: ecommerce-auth
+  labels:
+    app: ecommerce-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-auth
+  template:
+    metadata:
+      labels:
+        app: ecommerce-auth
+    spec:
+      serviceAccountName: auth-service-account
+
+      containers:
+        - name: ecommerce-auth
+          image: 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-auth-prod:v1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8001
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-auth-credentials
+                  key: DATABASE_URL
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-auth-credentials
+                  key: SECRET_KEY
+
+            - name: ALGORITHM
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-auth-credentials
+                  key: ALGORITHM
+
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-auth-credentials
+                  key: ACCESS_TOKEN_EXPIRE_MINUTES
+
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-auth-credentials
+                  key: FRONTEND_URL
+
+
+          volumeMounts:
+            - name: auth-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+
+      # Add under spec.template.spec
+
+      topologySpreadConstraints:
+        # Spread Auth Pods across Availability Zones
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ecommerce-auth
+
+        # Spread Auth Pods across worker nodes
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ecommerce-auth
+
+
+
+      volumes:
+        - name: auth-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ecommerce-auth-secrets

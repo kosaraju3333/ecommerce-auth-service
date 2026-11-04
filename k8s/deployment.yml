@@ -16,6 +16,14 @@ spec:
         app: ecommerce-auth
     spec:
       serviceAccountName: auth-service-account
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        ### Prevents the container from starting as root
+        runAsNonRoot: true
+        ### Runs the process using your existing appuser UID
+        runAsUser: 999
+        ### Uses your existing appgroup GID
+        runAsGroup: 999
 
       containers:
         - name: ecommerce-auth
@@ -25,6 +33,17 @@ spec:
           ports:
             - name: http
               containerPort: 8001
+
+          securityContext:
+            ### Prevents processes from gaining additional privileges through mechanisms such as setuid
+            allowPrivilegeEscalation: false
+            ### Removes Linux capabilities that the application normally doesn't need
+            capabilities:
+              drop:
+                - ALL
+            ### Applies the container runtime's default system-call restrictions
+            seccompProfile:
+              type: RuntimeDefault
 
           env:
             - name: DATABASE_URL
@@ -84,9 +103,6 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
-
-
-      # Add under spec.template.spec
 
       topologySpreadConstraints:
         # Spread Auth Pods across Availability Zones
